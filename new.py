@@ -23,6 +23,10 @@ class StockManagementApp:
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption("Gestion de Stock")
         self.clock = pygame.time.Clock()
+
+        # Charge l'image du fond d'écran et redimensionne-la
+        self.background_img = scale(pygame.image.load('photos/fond.webp'), (WINDOW_WIDTH, WINDOW_HEIGHT))
+
         self.create_widgets()
 
     def create_widgets(self):
@@ -33,6 +37,10 @@ class StockManagementApp:
         running = True
         while running:
             self.screen.fill(WHITE)
+            
+            # Blitte l'image du fond d'écran
+            self.screen.blit(self.background_img, (0, 0))
+
             self.show_products()
             self.screen.blit(self.add_button_img, (button_x, button_y))
             self.screen.blit(self.delete_button_img, (button_x, button_y + 100))
@@ -67,8 +75,22 @@ class StockManagementApp:
             product_text = f"{product[1]} - {product[2]} - {product[3]}$ - {product[4]} unités"
             products_text.append(product_text)
             font = pygame.font.Font(None, 36)
-            text = font.render(product_text, True, BLACK)
-            self.screen.blit(text, (50, 50 + i * 40))
+            
+            # Crée une surface de texte avec l'effet d'ombre
+            text = font.render(product_text, True, WHITE)
+            text_rect = text.get_rect()
+            text_rect.topleft = (50, 50 + i * 40)
+            
+            # Crée une copie du texte avec l'effet d'ombre
+            shadow_text = font.render(product_text, True, BLACK)
+            shadow_rect = shadow_text.get_rect()
+            shadow_rect.topleft = (52, 52 + i * 40)
+            
+            # Blitte le texte avec l'effet d'ombre
+            self.screen.blit(shadow_text, shadow_rect)
+            
+            # Blitte le texte principal
+            self.screen.blit(text, text_rect)
 
     def handle_product_click(self, mouse_y):
         # Gérer le clic sur une ligne d'article
@@ -153,7 +175,6 @@ class StockManagementApp:
         # Récupérer la liste des produits
         self.cursor.execute("SELECT * FROM product")
         return self.cursor.fetchall()
-
 
 if __name__ == "__main__":
     app = StockManagementApp()
