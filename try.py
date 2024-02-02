@@ -30,11 +30,11 @@ for data in product_data:
     product_name = data[0]
     cursor.execute("SELECT id FROM product WHERE name = %s", (product_name,))
     existing_product = cursor.fetchone()
-
+    
     if not existing_product:
-        # Si le produit n'existe pas, alors l'insérer
         cursor.execute("INSERT INTO product (name, description, price, quantity, id_category) VALUES (%s, %s, %s, %s, %s)", data)
-        db.commit()
+
+db.commit()
 
 def get_products():
     cursor.execute("SELECT * FROM product")
@@ -63,31 +63,27 @@ font = pygame.font.Font(None, 36)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
-def draw_button(x, y, width, height, color, text, action=None):
+def show_message(message):
+    print(message)
+
+def draw_button(x, y, width, height, color, text):
     pygame.draw.rect(screen, color, (x, y, width, height))
     font = pygame.font.Font(None, 24)
     button_text = font.render(text, True, BLACK)
     screen.blit(button_text, (x + width // 2 - button_text.get_width() // 2, y + height // 2 - button_text.get_height() // 2))
 
-def draw_quantity_buttons(x, y, product_id):
-    draw_button(x, y, 30, 30, (0, 255, 0), "+", action=lambda: update_quantity(product_id, 1))
-    draw_button(x + 40, y, 30, 30, (255, 0, 0), "-", action=lambda: update_quantity(product_id, -1))
+def add_product_screen():
+    add_screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Ajouter un produit")
 
-def update_quantity(product_id, delta):
-    cursor.execute("SELECT quantity FROM product WHERE id=%s", (product_id,))
-    current_quantity = cursor.fetchone()[0]
-    new_quantity = max(0, current_quantity + delta)
-    cursor.execute("UPDATE product SET quantity=%s WHERE id=%s", (new_quantity, product_id))
-    db.commit()
+    new_product_name = get_user_input(add_screen, font, 50, 50, "Nom du nouveau produit: ")
+    new_product_description = get_user_input(add_screen, font, 50, 100, "Description du nouveau produit: ")
+    new_product_price = float(get_user_input(add_screen, font, 50, 150, "Prix du nouveau produit: "))
+    new_product_quantity = int(get_user_input(add_screen, font, 50, 200, "Quantité du nouveau produit: "))
 
-# Fonction pour afficher un message
-def show_message(message):
-    text = font.render(message, True, BLACK)
-    screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2))
-    pygame.display.flip()
-    pygame.time.delay(2000)  # Affiche le message pendant 2 secondes
+    add_product(new_product_name, new_product_description, new_product_price, new_product_quantity, 1)
+    show_message("Produit ajouté avec succès!")
 
-# Fonction pour obtenir une entrée utilisateur
 def get_user_input(screen, font, x, y, prompt):
     input_text = ""
     input_box = pygame.Rect(x, y, 200, 30)
@@ -117,14 +113,27 @@ def get_user_input(screen, font, x, y, prompt):
 
         screen.fill(WHITE)
         pygame.draw.rect(screen, color, input_box, 2)
-        width = max(200, text.get_width() + 10)
+        width = max(200, text.get_width()+10)
         input_box.w = width
-        screen.blit(text, (input_box.x + 5, input_box.y + 5))
+        screen.blit(text, (input_box.x+5, input_box.y+5))
         pygame.display.flip()
 
 # Main loop
 running = True
 while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    screen.fill(WHITE)
+
+    products = get_products()
+    y_offset = 50
+    for product in products:
+        text = font.render(f"ID: {product[0]} - {product[1]} - Prix: {product[3]} - Quantité: {product[4]}", True, BLACK)
+        screen.blit(text, (50, y_offset))
+        y_offset += 40
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -136,18 +145,8 @@ while running:
             if 600 < x < 750 and 50 < y < 80:
                 add_product_screen()
 
-    screen.fill(WHITE)
-
-    products = get_products()
-    y_offset = 50
-    for product in products:
-        text = font.render(f"ID: {product[0]} - {product[1]} - Prix: {product[3]} - Quantité: {product[4]}", True, BLACK)
-        screen.blit(text, (50, y_offset))
-
-        # Dessiner les boutons "+" et "-"
-        draw_quantity_buttons(700, y_offset, product[0])
-
-        y_offset += 40
+    # Ajouter
+    draw_button(600, 50, 150, 30, (0, 255, 0), "Ajouter")
 
     pygame.display.flip()
 
