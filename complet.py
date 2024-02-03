@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 from pygame.transform import scale
+import csv
 import mysql.connector
 from tkinter import simpledialog, messagebox
 
@@ -27,12 +28,16 @@ class StockManagementApp:
         # Charge l'image du fond d'écran et redimensionne-la
         self.background_img = scale(pygame.image.load('photos/fond.webp'), (WINDOW_WIDTH, WINDOW_HEIGHT))
 
-        self.create_widgets()
-
-    def create_widgets(self):
+        # Ajout des images des boutons
         self.add_button_img = scale(pygame.image.load('photos/add.png'), (50, 50))
         self.delete_button_img = scale(pygame.image.load('photos/delete.webp'), (50, 50))
         self.update_button_img = scale(pygame.image.load('photos/update_button.png'), (50, 50))
+        self.export_button_img = scale(pygame.image.load('photos/csv.png'), (50, 50))
+        self.filter_button_img = scale(pygame.image.load('photos/filtre.png'), (50, 50))
+
+        self.create_widgets()
+
+    def create_widgets(self):
         button_x, button_y = 650, 50
         running = True
         while running:
@@ -45,6 +50,8 @@ class StockManagementApp:
             self.screen.blit(self.add_button_img, (button_x, button_y))
             self.screen.blit(self.delete_button_img, (button_x, button_y + 100))
             self.screen.blit(self.update_button_img, (button_x, button_y + 200))
+            self.screen.blit(self.export_button_img, (button_x, button_y + 300))
+            self.screen.blit(self.filter_button_img, (button_x, button_y + 400))
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -58,6 +65,10 @@ class StockManagementApp:
                             self.delete_product()
                         elif button_y + 200 < mouse_y < button_y + 240:
                             self.update_product()
+                        elif button_y + 300 < mouse_y < button_y + 340:
+                            self.export_to_csv()
+                        elif button_y + 400 < mouse_y < button_y + 440:
+                            self.filter_by_category()
                     else:
                         self.handle_product_click(mouse_y)
 
@@ -66,34 +77,17 @@ class StockManagementApp:
 
         pygame.quit()
 
-    def show_products(self):
-        # liste des produits
-        products_text = []
-        self.cursor.execute("SELECT * FROM product")
-        products = self.cursor.fetchall()
+    def show_products(self, products=None):
+        products = products or self.get_products()
         for i, product in enumerate(products):
             product_text = f"{product[1]} - {product[2]} - {product[3]}$ - {product[4]} unités"
-            products_text.append(product_text)
             font = pygame.font.Font(None, 36)
-            
-            # Crée une surface de texte
             text = font.render(product_text, True, WHITE)
             text_rect = text.get_rect()
             text_rect.topleft = (50, 50 + i * 40)
-            
-            # Crée une copie du texte avec l'effet d'ombre
-            shadow_text = font.render(product_text, True, BLACK)
-            shadow_rect = shadow_text.get_rect()
-            shadow_rect.topleft = (52, 52 + i * 40)
-            
-            # Blitte le texte avec l'effet d'ombre
-            self.screen.blit(shadow_text, shadow_rect)
-            
-            # Blitte le texte principal
             self.screen.blit(text, text_rect)
 
     def handle_product_click(self, mouse_y):
-        # Gérer le clic sur une ligne d'article
         product_index = (mouse_y - 50) // 40
         if 0 <= product_index < len(self.get_products()):
             product_id = self.get_products()[product_index][0]
@@ -110,7 +104,6 @@ class StockManagementApp:
             messagebox.showwarning("Avertissement", "Veuillez sélectionner une ligne d'article valide.")
 
     def add_product(self):
-        # Ajout d'un produit
         name = simpledialog.askstring("Ajouter Produit", "Nom du Produit:")
         description = simpledialog.askstring("Ajouter Produit", "Description:")
         price = simpledialog.askfloat("Ajouter Produit", "Prix:")
@@ -130,7 +123,6 @@ class StockManagementApp:
             messagebox.showwarning("Avertissement", "Veuillez remplir tous les champs.")
 
     def delete_product(self):
-        # Supprime un produit
         selected_product = pygame.mouse.get_pos()
         product_index = (selected_product[1] - 50) // 40
         if 0 <= product_index < len(self.get_products()):
@@ -140,7 +132,6 @@ class StockManagementApp:
             messagebox.showwarning("Avertissement", "Veuillez sélectionner une ligne d'article valide.")
 
     def update_product(self):
-        # Mettre à jour la quantité d'un produit
         selected_product = pygame.mouse.get_pos()
         product_index = (selected_product[1] - 50) // 40
         if 0 <= product_index < len(self.get_products()):
@@ -150,7 +141,6 @@ class StockManagementApp:
             messagebox.showwarning("Avertissement", "Veuillez sélectionner une ligne d'article valide.")
 
     def delete_product_by_id(self, product_id):
-        # Supprimer un produit par son ID
         try:
             self.cursor.execute("DELETE FROM product WHERE id=%s", (product_id,))
             self.connection.commit()
@@ -159,7 +149,6 @@ class StockManagementApp:
             messagebox.showerror("Erreur", f"Erreur lors de la suppression du produit : {str(e)}")
 
     def update_product_by_id(self, product_id):
-        # Mettre à jour un produit par son ID
         new_quantity = simpledialog.askinteger("Modifier Produit", "Nouvelle quantité:")
         if new_quantity is not None:
             try:
@@ -171,10 +160,40 @@ class StockManagementApp:
         else:
             messagebox.showwarning("Avertissement", "Veuillez entrer une nouvelle quantité valide.")
 
+    def export_to_csv(self):
+        products = self.get_products()
+        file_path = "stock.csv"
+
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["ID", "Nom", "Description", "Prix", "Quantité", "Catégorie"])
+
+            for product in products:
+                writer.writerow(product)
+
+        messagebox.showinfo("Export CSV", f"Les produits ont été exportés avec succès sous {file_path}")
+
+    def filter_by_category(self):
+        categories = self.get_categories()
+        selected_category = simpledialog.askstring("Filtrer par Catégorie", "Choisissez une catégorie:", 
+                                                   autocompletelist=categories)
+        
+        if selected_category:
+            self.screen.fill(WHITE)
+            self.screen.blit(self.background_img, (0, 0))
+            
+            filtered_products = [product for product in self.get_products() if product[5] == selected_category]
+            self.show_products(filtered_products)
+
+            pygame.display.flip()
+
     def get_products(self):
-        # Récupérer la liste des produits
         self.cursor.execute("SELECT * FROM product")
         return self.cursor.fetchall()
+
+    def get_categories(self):
+        self.cursor.execute("SELECT name FROM category")
+        return [category[0] for category in self.cursor.fetchall()]
 
 if __name__ == "__main__":
     app = StockManagementApp()
