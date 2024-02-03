@@ -82,10 +82,18 @@ class StockManagementApp:
         for i, product in enumerate(products):
             product_text = f"{product[1]} - {product[2]} - {product[3]}$ - {product[4]} unités"
             font = pygame.font.Font(None, 36)
+
+            # Texte principal (sans ombre)
             text = font.render(product_text, True, WHITE)
             text_rect = text.get_rect()
             text_rect.topleft = (50, 50 + i * 40)
             self.screen.blit(text, text_rect)
+
+            # Ombre du texte (décalé de 2 pixels vers le bas et la droite, couleur noire)
+            shadow_text = font.render(product_text, True, BLACK)
+            shadow_rect = shadow_text.get_rect()
+            shadow_rect.topleft = (51, 51 + i * 40)
+            self.screen.blit(shadow_text, shadow_rect)
 
     def handle_product_click(self, mouse_y):
         product_index = (mouse_y - 50) // 40
