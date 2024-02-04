@@ -33,7 +33,6 @@ class StockManagementApp:
         self.delete_button_img = scale(pygame.image.load('photos/delete.webp'), (50, 50))
         self.update_button_img = scale(pygame.image.load('photos/update_button.png'), (50, 50))
         self.export_button_img = scale(pygame.image.load('photos/csv.png'), (50, 50))
-        self.filter_button_img = scale(pygame.image.load('photos/filtre.png'), (50, 50))
 
         self.create_widgets()
 
@@ -51,7 +50,6 @@ class StockManagementApp:
             self.screen.blit(self.delete_button_img, (button_x, button_y + 100))
             self.screen.blit(self.update_button_img, (button_x, button_y + 200))
             self.screen.blit(self.export_button_img, (button_x, button_y + 300))
-            self.screen.blit(self.filter_button_img, (button_x, button_y + 400))
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -67,8 +65,6 @@ class StockManagementApp:
                             self.update_product()
                         elif button_y + 300 < mouse_y < button_y + 340:
                             self.export_to_csv()
-                        elif button_y + 400 < mouse_y < button_y + 440:
-                            self.filter_by_category()
                     else:
                         self.handle_product_click(mouse_y)
 
@@ -180,20 +176,6 @@ class StockManagementApp:
                 writer.writerow(product)
 
         messagebox.showinfo("Export CSV", f"Les produits ont été exportés avec succès sous {file_path}")
-
-    def filter_by_category(self):
-        categories = self.get_categories()
-        selected_category = simpledialog.askstring("Filtrer par Catégorie", "Choisissez une catégorie:", 
-                                                   autocompletelist=categories)
-        
-        if selected_category:
-            self.screen.fill(WHITE)
-            self.screen.blit(self.background_img, (0, 0))
-            
-            filtered_products = [product for product in self.get_products() if product[5] == selected_category]
-            self.show_products(filtered_products)
-
-            pygame.display.flip()
 
     def get_products(self):
         self.cursor.execute("SELECT * FROM product")
