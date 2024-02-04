@@ -21,7 +21,7 @@ class Product:
     def show_products(self, products=None):
         products = products or self.get_products()
         for i, product in enumerate(products):
-            product_text = f"{product[1]} - {product[2]} - {product[3]}$ - {product[4]} unités"
+            product_text = f"{product[1]} - {product[2]} - {product[3]}€ - {product[4]} unités"
             font = pygame.font.Font(None, 36)
 
             text = font.render(product_text, True, (255, 255, 255))
