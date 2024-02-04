@@ -1,17 +1,10 @@
-# Category.py
-import pygame
-from pygame.locals import *
-from tkinter import simpledialog, messagebox
+import mysql.connector
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+class Category:
+    def __init__(self, connection, cursor):
+        self.connection = connection
+        self.cursor = cursor
 
-class CategoryManagement:
-    def __init__(self, app_instance):
-        self.app = app_instance
-
-    def show_categories(self):
-        # Ajoutez le code pour afficher les catégories ici
-        pass
-
-    # Ajoutez d'autres méthodes pour gérer les catégories selon vos besoins
+    def get_categories(self):
+        self.cursor.execute("SELECT name FROM category")
+        return [category[0] for category in self.cursor.fetchall()]

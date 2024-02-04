@@ -1,40 +1,38 @@
-# product.py
 import pygame
 from pygame.locals import *
 from pygame.transform import scale
+import csv
 from tkinter import simpledialog, messagebox
+from Category import Category
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+class Product:
+    def __init__(self, connection, cursor, screen, clock):
+        self.connection = connection
+        self.cursor = cursor
+        self.screen = screen
+        self.clock = clock
+        self.category_instance = Category(connection, cursor)
+        self.background_img = scale(pygame.image.load('photos/fond.webp'), (800, 600))
+        self.add_button_img = scale(pygame.image.load('photos/add.png'), (50, 50))
+        self.delete_button_img = scale(pygame.image.load('photos/delete.webp'), (50, 50))
+        self.update_button_img = scale(pygame.image.load('photos/update_button.png'), (50, 50))
+        self.export_button_img = scale(pygame.image.load('photos/csv.png'), (50, 50))
 
-class ProductManagement:
-    def __init__(self, app_instance):
-        self.app = app_instance
-
-    def show_products(self):
-        products_text = []
-        self.app.cursor.execute("SELECT * FROM product")
-        products = self.app.cursor.fetchall()
+    def show_products(self, products=None):
+        products = products or self.get_products()
         for i, product in enumerate(products):
             product_text = f"{product[1]} - {product[2]} - {product[3]}$ - {product[4]} unités"
-            products_text.append(product_text)
             font = pygame.font.Font(None, 36)
 
-            # Crée une surface de texte
-            text = font.render(product_text, True, WHITE)
+            text = font.render(product_text, True, (255, 255, 255))
             text_rect = text.get_rect()
             text_rect.topleft = (50, 50 + i * 40)
+            self.screen.blit(text, text_rect)
 
-            # Crée une copie du texte avec l'effet d'ombre
-            shadow_text = font.render(product_text, True, BLACK)
+            shadow_text = font.render(product_text, True, (0, 0, 0))
             shadow_rect = shadow_text.get_rect()
-            shadow_rect.topleft = (52, 52 + i * 40)
-
-            # Blitte le texte avec l'effet d'ombre
-            self.app.screen.blit(shadow_text, shadow_rect)
-
-            # Blitte le texte principal
-            self.app.screen.blit(text, text_rect)
+            shadow_rect.topleft = (51, 51 + i * 40)
+            self.screen.blit(shadow_text, shadow_rect)
 
     def handle_product_click(self, mouse_y):
         product_index = (mouse_y - 50) // 40
@@ -61,10 +59,10 @@ class ProductManagement:
 
         if name and price and quantity and category:
             try:
-                self.app.cursor.execute("INSERT INTO product (name, description, price, quantity, id_category) "
-                                        "VALUES (%s, %s, %s, %s, (SELECT id FROM category WHERE name = %s))",
-                                        (name, description, price, quantity, category))
-                self.app.connection.commit()
+                self.cursor.execute("INSERT INTO product (name, description, price, quantity, id_category) "
+                                    "VALUES (%s, %s, %s, %s, (SELECT id FROM category WHERE name = %s))",
+                                    (name, description, price, quantity, category))
+                self.connection.commit()
                 messagebox.showinfo("Succès", "Produit ajouté avec succès.")
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors de l'ajout du produit : {str(e)}")
@@ -91,8 +89,8 @@ class ProductManagement:
 
     def delete_product_by_id(self, product_id):
         try:
-            self.app.cursor.execute("DELETE FROM product WHERE id=%s", (product_id,))
-            self.app.connection.commit()
+            self.cursor.execute("DELETE FROM product WHERE id=%s", (product_id,))
+            self.connection.commit()
             messagebox.showinfo("Succès", "Produit supprimé avec succès.")
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur lors de la suppression du produit : {str(e)}")
@@ -101,14 +99,27 @@ class ProductManagement:
         new_quantity = simpledialog.askinteger("Modifier Produit", "Nouvelle quantité:")
         if new_quantity is not None:
             try:
-                self.app.cursor.execute("UPDATE product SET quantity=%s WHERE id=%s", (new_quantity, product_id))
-                self.app.connection.commit()
+                self.cursor.execute("UPDATE product SET quantity=%s WHERE id=%s", (new_quantity, product_id))
+                self.connection.commit()
                 messagebox.showinfo("Succès", "Produit mis à jour avec succès.")
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors de la mise à jour du produit : {str(e)}")
         else:
             messagebox.showwarning("Avertissement", "Veuillez entrer une nouvelle quantité valide.")
 
+    def export_to_csv(self):
+        products = self.get_products()
+        file_path = "stock.csv"
+
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["ID", "Nom", "Description", "Prix", "Quantité", "Catégorie"])
+
+            for product in products:
+                writer.writerow(product)
+
+        messagebox.showinfo("Export CSV", f"Les produits ont été exportés avec succès sous {file_path}")
+
     def get_products(self):
-        self.app.cursor.execute("SELECT * FROM product")
-        return self.app.cursor.fetchall()
+        self.cursor.execute("SELECT * FROM product")
+        return self.cursor.fetchall()
